@@ -39,7 +39,7 @@ function MermaidDiagram({ chart }: { chart: string }) {
       mermaid
         .render("mermaid-" + Math.random().toString(36).substr(2, 9), chart)
         .then(({ svg }) => {
-          elementRef.current!.innerHTML = svg;
+          if (elementRef.current) elementRef.current.innerHTML = svg;
         })
         .catch((error) => {
           console.error("Mermaid rendering error:", error);
