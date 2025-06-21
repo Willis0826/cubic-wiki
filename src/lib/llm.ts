@@ -170,7 +170,7 @@ export const generateSubsystemSummaryFromFiles = async (
     model: process.env.OPENAI_MODEL || "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(files) },
+      { role: "user", content: JSON.stringify({ title, files }) },
     ],
     temperature: TEMPERATURE,
   });
