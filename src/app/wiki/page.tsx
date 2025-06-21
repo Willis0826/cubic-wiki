@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"; // for SSR always fresh
 
 export default async function WikiListPage() {
   const wikis = await prisma.wikiPage.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { id: "desc" },
   });
 
   return (

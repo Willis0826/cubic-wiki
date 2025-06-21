@@ -125,3 +125,55 @@ Return a JSON array like:
 
   return subsystems;
 };
+
+export const generateSubsystemSummaryFromFiles = async (
+  title: string,
+  files: {
+    path: string;
+    content: string;
+  }[]
+) => {
+  const systemPrompt = `
+  You are a helpful assistant that generates a summary for a given files.
+  The files are related to a specific subsystem with a title.
+  The summary should provide a clear and concise description that can help the user to understand the subsystem.
+  The summary should be in markdown format.
+  The summary should be in English.
+  If you have enough information, you can also generate a diagram to help the user to understand the subsystem.
+  The diagram should be in mermaid format.
+
+  Example:
+  Title: Authentication
+  Files:
+  - src/auth/index.ts
+    import { User } from "@/auth/user";
+    ...
+  
+  - src/auth/user.ts
+    import { crypto } from "@/auth/crypto";
+    ...
+
+  Summary:
+  
+  This subsystem handles authentication and password management. It includes the following files:
+  - src/auth/index.ts: Main authentication module
+  - src/auth/user.ts: User management functionality
+  - src/auth/crypto.ts: Cryptography functionality
+
+  Diagram:
+  \`\`\`mermaid
+  graph TD
+  \`\`\`
+  `;
+
+  const completion = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(files) },
+    ],
+    temperature: TEMPERATURE,
+  });
+
+  return completion.choices[0].message.content || "";
+};
