@@ -15,7 +15,7 @@ import { Components } from "react-markdown";
 import { SubsystemCard } from "@/components/subsystem-card/subsystem-card";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 // Server Component
