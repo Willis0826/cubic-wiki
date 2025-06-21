@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get repo tree
+    // There is a limit of 100,000 entries and 7MB of data
     const treeRes = await octokit.rest.git.getTree({
       owner,
       repo,
