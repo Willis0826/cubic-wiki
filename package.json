@@ -6,22 +6,41 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prisma:push": "prisma db push"
   },
   "dependencies": {
+    "@mantine/core": "^8.1.1",
+    "@mantine/form": "^8.1.1",
+    "@mantine/hooks": "^8.1.1",
+    "@mantine/notifications": "^8.1.1",
+    "@prisma/client": "^6.10.1",
+    "@supabase/supabase-js": "^2.50.0",
+    "@tabler/icons-react": "^3.34.0",
+    "@tanstack/react-query": "^5.80.10",
+    "next": "15.3.4",
+    "octokit": "^5.0.3",
+    "openai": "4.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.4"
+    "react-hook-form": "^7.58.1",
+    "react-markdown": "^10.1.0",
+    "react-query": "^3.39.3",
+    "remark-gfm": "^4.0.1",
+    "supabase": "^2.26.9",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
-    "@eslint/eslintrc": "^3"
+    "prisma": "^6.10.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.3",
+    "typescript": "^5"
   }
 }
