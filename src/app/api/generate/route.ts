@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const { repoUrl } = bodySchema.parse(json);
 
-    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)(\/|$)/);
+    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/);
     if (!match) {
       return NextResponse.json(
         { error: "Invalid GitHub URL" },
