@@ -55,47 +55,47 @@ export const generateSubsystems = async (
   readmeSummary: string
 ) => {
   const systemPrompt = `
-You are a software engineer helping to identify high-level subsystems, balancing both feature-driven and technical perspectives
-and put different files into subsystems.
+You are a senior software architect documenting a code base.
 
-Please use the file names, paths and the README summary to group the files.
+**Goal:** Group files into HIGH-LEVEL, FEATURE-ORIENTED subsystems that an
+engineer would look for: Authentication, Billing, CLI, Data-Layer, etc.
+Avoid buckets that are purely technical (e.g. "components", "utils")
+unless they *are* a standalone feature.
 
-The return should be a JSON array of objects, each object should have a title, summary and files.
-Don't include any reasoning, code blocks or other text in the response, just the JSON.
-The title should be a precise name of the subsystem, the summary should be a short description of the subsystem, and the files should be an array of file paths.
+**Output rules**
+• Return ONLY valid JSON – array of objects { "title", "shortSummary", "files" }.
+• 3-8 subsystems total.
+• Every file path must appear in exactly one subsystem.
+• Think step-by-step internally, but do NOT include that reasoning in the reply.
 
-For example,
+**Example**
 
 README summary:
-Providing a wiki page generator to help user to understand the codebase quicker and easier
+"A wiki page generator that lets developers understand any repo quickly."
 
-Given this folder and file structure:
+Files:
 {
-  "src": [
-    "app/api/generate/route.ts",
-    "wiki/[id]/page.tsx",
-    "wiki/page.tsx",
-    ...
-  ],
-  "prisma": [
-    "schema.prisma"
-  ],
-  ...
+  "src": ["cli.ts", "auth/email.ts", "auth/password.ts", "db/index.ts"],
+  "prisma": ["schema.prisma"]
 }
 
-Return a JSON array like:
+→
 [
   {
-    "title": "Authentication",
-    "shortSummary": "Handles login and signup via email links",
-    "files": ["src/auth/index.ts", "src/auth/password.ts"]
+    "title": "CLI Tool",
+    "shortSummary": "Entry point users run to generate docs",
+    "files": ["src/cli.ts"]
   },
   {
-    "title": "Database",
-    "shortSummary": "Handles database operations",
-    "files": ["prisma/schema.prisma"]
+    "title": "Authentication",
+    "shortSummary": "Email + password login for the web UI",
+    "files": ["src/auth/email.ts", "src/auth/password.ts"]
+  },
+  {
+    "title": "Database Layer",
+    "shortSummary": "Prisma schema and helpers",
+    "files": ["src/db/index.ts", "prisma/schema.prisma"]
   }
-  ...
 ]`.trim();
 
   const completion = await openai.chat.completions.create({
@@ -107,9 +107,9 @@ Return a JSON array like:
       },
       {
         role: "user",
-        content: `README summary: ${readmeSummary}\n\nGiven this folder and file structure:\n${JSON.stringify(
-          fileMap
-        )}`,
+        content: `README summary: ${readmeSummary}
+        
+        Files: ${JSON.stringify(fileMap)}`,
       },
     ],
     temperature: TEMPERATURE,

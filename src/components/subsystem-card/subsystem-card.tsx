@@ -151,7 +151,7 @@ export function SubsystemCard({
           <Text size="xs" c="dimmed">
             Files:
           </Text>
-          <ScrollArea mah={200}>
+          <ScrollArea h={120} type="auto">
             <Flex direction="column">
               {Array.isArray(subsystem.files) &&
                 subsystem.files.map((file, index) => (
