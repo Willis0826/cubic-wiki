@@ -32,6 +32,7 @@ export function InteractiveInsightsButton({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => {
+        // TODO: call the generate-subsystem-summary endpoint
         console.log("clicked");
       }}
     >

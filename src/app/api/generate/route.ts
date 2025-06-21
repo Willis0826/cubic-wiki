@@ -1,9 +1,7 @@
-// src/app/api/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { Octokit } from "octokit";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import OpenAI from "openai";
 import {
   generateShortSummary,
   generateSubsystems,
@@ -18,10 +16,6 @@ const bodySchema = z.object({
 // Create clients
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
