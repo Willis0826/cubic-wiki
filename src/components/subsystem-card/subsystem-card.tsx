@@ -67,7 +67,7 @@ type SubsystemCardProps = {
     title: string;
     shortSummary: string;
     summary: string | null;
-    files: any;
+    files: string[];
   };
   repoUrl: string;
   branch: string;
@@ -81,7 +81,7 @@ export function SubsystemCard({
   const [summary, setSummary] = useState<string | null>(subsystem.summary);
 
   const components: Components = {
-    code({ node, className, children, ...props }: any) {
+    code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || "");
       const isInline = !match;
       const language = match ? match[1] : "";
@@ -127,7 +127,7 @@ export function SubsystemCard({
               </Group>
 
               <Text size="xs" c="white" opacity={0.9}>
-                Get detailed insights about this subsystem's architecture,
+                Get detailed insights about this subsystem&apos;s architecture,
                 patterns, and recommendations
               </Text>
 
@@ -154,7 +154,7 @@ export function SubsystemCard({
           <ScrollArea mah={200}>
             <Flex direction="column">
               {Array.isArray(subsystem.files) &&
-                subsystem.files.map((file: any, index: number) => (
+                subsystem.files.map((file, index) => (
                   <Anchor
                     key={index}
                     href={`${repoUrl}/blob/${branch}/${file?.toString()}`}

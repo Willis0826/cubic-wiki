@@ -4,7 +4,7 @@ import { Button, Container, TextInput, Title } from "@mantine/core";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { showNotification } from "@mantine/notifications";
-import { IconCheck, IconX, IconMicroscope } from "@tabler/icons-react";
+import { IconCheck, IconX } from "@tabler/icons-react";
 
 type FormValues = {
   repoUrl: string;
@@ -38,10 +38,10 @@ export default function RepoInput() {
       });
 
       router.push(`/wiki/${json.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       showNotification({
         title: "Error",
-        message: err.message || "Something went wrong",
+        message: err instanceof Error ? err.message : "Something went wrong",
         color: "red",
         icon: <IconX />,
       });

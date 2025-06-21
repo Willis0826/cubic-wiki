@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const { repoUrl } = bodySchema.parse(json);
 
-    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/);
+    const match = repoUrl.match(
+      /github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/
+    );
     if (!match) {
       return NextResponse.json(
         { error: "Invalid GitHub URL" },
@@ -132,8 +134,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: wikiPage.id,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+
+    // Type-safe error handling
+    const errorMessage =
+      err instanceof Error ? err.message : "An unknown error occurred";
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -112,11 +112,13 @@ export async function POST(req: NextRequest) {
       totalFiles: subsystem.files.length,
       summary: summary,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in generate-subsystem-summary:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+
+    // Type-safe error handling
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown error occurred";
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

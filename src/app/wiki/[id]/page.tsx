@@ -39,7 +39,7 @@ export default async function WikiDetailPage({ params }: PageProps) {
   if (!wiki) return notFound();
 
   const components: Components = {
-    code({ node, className, children, ...props }: any) {
+    code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || "");
       const isInline = !match;
       return !isInline ? (
@@ -83,7 +83,12 @@ export default async function WikiDetailPage({ params }: PageProps) {
             {wiki.subsystems.map((subsystem) => (
               <SubsystemCard
                 key={subsystem.id}
-                subsystem={subsystem}
+                subsystem={{
+                  ...subsystem,
+                  files: Array.isArray(subsystem.files)
+                    ? (subsystem.files as string[])
+                    : [],
+                }}
                 repoUrl={wiki.repoUrl}
                 branch={wiki.branch}
               />
