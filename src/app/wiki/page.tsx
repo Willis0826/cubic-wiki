@@ -11,6 +11,27 @@ import {
 
 export const dynamic = "force-dynamic"; // for SSR always fresh
 
+// Helper function to validate and sanitize URLs
+function isValidUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    // Only allow http, https, and git protocols
+    return ["http:", "https:", "git:"].includes(urlObj.protocol);
+  } catch {
+    return false;
+  }
+}
+
+// Helper function to get display text for URL
+function getDisplayUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname + urlObj.pathname;
+  } catch {
+    return url;
+  }
+}
+
 export default async function WikiListPage() {
   const wikis = await prisma.wikiPage.findMany({
     orderBy: { id: "desc" },
@@ -35,7 +56,20 @@ export default async function WikiListPage() {
               </Anchor>
               <Stack>
                 <Box key={w.id}>
-                  Repo: <Anchor href={w.repoUrl}>{w.repoUrl}</Anchor>
+                  Repo:{" "}
+                  {isValidUrl(w.repoUrl) ? (
+                    <Anchor
+                      href={w.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {getDisplayUrl(w.repoUrl)}
+                    </Anchor>
+                  ) : (
+                    <Text c="red" size="sm">
+                      Invalid URL
+                    </Text>
+                  )}
                   <Text size="sm" c="dimmed">
                     {w.shortSummary}
                   </Text>

@@ -20,8 +20,13 @@ type PageProps = {
 
 // Server Component
 export default async function WikiDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const wikiId = parseInt(id);
+
+  if (isNaN(wikiId)) return notFound();
+
   const wiki = await prisma.wikiPage.findUnique({
-    where: { id: parseInt(params.id) },
+    where: { id: wikiId },
     include: {
       subsystems: {
         orderBy: {

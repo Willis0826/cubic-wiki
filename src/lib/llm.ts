@@ -115,15 +115,20 @@ Return a JSON array like:
     temperature: TEMPERATURE,
   });
 
-  const subsystems = JSON.parse(
-    completion.choices[0].message.content || "[]"
-  ) as {
-    title: string;
-    shortSummary: string;
-    files: string[];
-  }[];
+  try {
+    const subsystems = JSON.parse(
+      completion.choices[0].message.content || "[]"
+    ) as {
+      title: string;
+      shortSummary: string;
+      files: string[];
+    }[];
 
-  return subsystems;
+    return subsystems;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const generateSubsystemSummaryFromFiles = async (
