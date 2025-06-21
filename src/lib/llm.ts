@@ -64,6 +64,7 @@ unless they *are* a standalone feature.
 
 **Output rules**
 • Return ONLY valid JSON – array of objects { "title", "shortSummary", "files" }.
+• Don't include any code blocks \`\`\` in the output.
 • 3-8 subsystems total.
 • Every file path must appear in exactly one subsystem.
 • Think step-by-step internally, but do NOT include that reasoning in the reply.

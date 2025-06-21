@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Cursor Rules for Cubic Wiki - Next.js 15 + TypeScript + Prisma + Supabase Project
 
 ## Project Overview
