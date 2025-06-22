@@ -76,12 +76,25 @@ For specific subsystems, users can request "Get More Insights" to:
 - Provide recommendations and understanding of the codebase
 - Create Mermaid diagrams to visualize system architecture
 
+### 🤖 AI Chat Assistant
+Every wiki page includes an intelligent chat widget that allows users to:
+- **Ask Questions**: Get instant answers about the repository structure, subsystems, and files
+- **Search Codebase**: Find specific information across all analyzed files and subsystems
+- **Get Details**: Request detailed information about specific subsystems or files
+- **Context-Aware**: The AI assistant has full context of the wiki page content and can provide relevant, accurate responses
+- **Multi-Step Reasoning**: Supports complex queries with up to 3-step tool calls for comprehensive answers
+- **Real-time Streaming**: Responses are streamed in real-time for a smooth user experience
+
+The chat assistant uses the same AI model and has access to all the analyzed data, making it a powerful tool for understanding and exploring codebases.
+
 ## Features
 
 - **Dual Analysis Modes**: Choose between fast path-based analysis (V1) or comprehensive content-based analysis (V2)
 - **Intelligent File Grouping**: LLM-powered subsystem identification with semantic clustering
 - **Comprehensive Summaries**: Detailed analysis of repository structure and architecture
 - **Deep Dive Capabilities**: Subsystem-specific insights with Mermaid diagram generation
+- **AI Chat Assistant**: Interactive chat widget for asking questions about the codebase
+- **Smart Search**: AI-powered search across subsystems, files, and summaries
 - **File Content Analysis**: Advanced V2 mode analyzes actual code content for better accuracy
 - **AI-Powered Clustering**: K-means clustering groups related files based on semantic similarity
 - **Smart File Selection**: Automatically identifies and prioritizes the most important files
