@@ -20,11 +20,18 @@ type FormValues = {
 };
 
 export default function RepoInput() {
-  const { register, handleSubmit, formState } = useForm<FormValues>({
+  const basicForm = useForm<FormValues>({
     defaultValues: {
       repoUrl: "https://github.com/Textualize/rich-cli",
     },
   });
+
+  const proForm = useForm<FormValues>({
+    defaultValues: {
+      repoUrl: "https://github.com/Textualize/rich-cli",
+    },
+  });
+
   const router = useRouter();
 
   const onSubmit = async (data: FormValues) => {
@@ -104,15 +111,19 @@ export default function RepoInput() {
         Using file names and readme to generate multiple subsystems. <br />
         This is cheaper but less accurate.
       </Text>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={basicForm.handleSubmit(onSubmit)}>
         <TextInput
           label="GitHub Repository URL"
           placeholder="https://github.com/user/repo"
-          {...register("repoUrl", { required: true })}
-          error={formState.errors.repoUrl && "Repo URL is required"}
+          {...basicForm.register("repoUrl", { required: true })}
+          error={basicForm.formState.errors.repoUrl && "Repo URL is required"}
           mb="sm"
         />
-        <Button fullWidth type="submit" loading={formState.isSubmitting}>
+        <Button
+          fullWidth
+          type="submit"
+          loading={basicForm.formState.isSubmitting}
+        >
           Cubic Read →
         </Button>
       </form>
@@ -136,18 +147,18 @@ export default function RepoInput() {
         Using file content to generate multiple subsystems. <br />
         This is more accurate but more expensive.
       </Text>
-      <form onSubmit={handleSubmit(onSubmitV2)}>
+      <form onSubmit={proForm.handleSubmit(onSubmitV2)}>
         <TextInput
           label="GitHub Repository URL"
           placeholder="https://github.com/user/repo"
-          {...register("repoUrl", { required: true })}
-          error={formState.errors.repoUrl && "Repo URL is required"}
+          {...proForm.register("repoUrl", { required: true })}
+          error={proForm.formState.errors.repoUrl && "Repo URL is required"}
           mb="sm"
         />
         <Button
           fullWidth
           type="submit"
-          loading={formState.isSubmitting}
+          loading={proForm.formState.isSubmitting}
           variant="gradient"
           gradient={{ from: "blue", to: "cyan", deg: 90 }}
         >
