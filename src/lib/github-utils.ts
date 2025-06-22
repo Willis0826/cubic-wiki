@@ -102,7 +102,7 @@ export async function getFileFromRepoZip(
   );
 
   // Extract ZIP contents
-  const zip = await JSZip.loadAsync(Buffer.from(response.data as any));
+  const zip = await JSZip.loadAsync(Buffer.from(response.data));
   const files: { path: string; content: string }[] = [];
 
   for (const fullPath in zip.files) {

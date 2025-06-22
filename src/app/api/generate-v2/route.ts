@@ -13,9 +13,7 @@ import {
   repoUrlSchema,
   parseGitHubUrl,
   getRepoMetadata,
-  getRepoTree,
   getReadmeContent,
-  getFileContent,
   createWikiPageData,
   getFileFromRepoZip,
 } from "@/lib/github-utils";

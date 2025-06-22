@@ -147,7 +147,7 @@ export default function RepoInput() {
           Beta
         </Badge>
         {/* info icon */}
-        <Tooltip label="Request timeout is 60 seconds, larger repos may failed to generate">
+        <Tooltip label="Request timeout is 60 seconds, larger repos may fail to generate">
           <IconInfoCircle size={22} />
         </Tooltip>
       </Flex>
