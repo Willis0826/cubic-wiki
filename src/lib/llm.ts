@@ -50,7 +50,7 @@ export const generateShortSummary = async (summary: string) => {
   return completion.choices[0].message.content || "";
 };
 
-export const generateSubsystems = async (
+export const generateSubsystemsFromFilePaths = async (
   fileMap: Record<string, string[]>,
   readmeSummary: string
 ) => {
@@ -132,6 +132,100 @@ Files:
   }
 };
 
+export const generateSubsystemsFromFileSummary = async (
+  fileContents: {
+    path: string;
+    // The content of the file
+    summary: string;
+  }[],
+  readmeSummary: string
+) => {
+  const systemPrompt = `
+  You are a software engineer documenting a codebase.
+
+  The provided README summary is just a summary of the codebase, it's not a detailed description of the codebase.
+  You should use the README summary to help you understand the codebase and generate a concise summary for the subsystem.
+  The most important part is to understand the main features and the main purpose of the provided files array.
+  The title should not contain any project name and should focus on the main features and the main purpose of the provided files array.
+  
+  **Goal:** Analysis files by their summary and file paths and generate a concise for
+  - Title for the subsystem
+  - Short summary (1–2 sentences) for the subsystem
+
+  **Output rules**
+  • Return ONLY valid JSON object { "title", "shortSummary" }.
+  • Don't include any code blocks \`\`\` in the output.
+  • There should be only one subsystem given all the summaries of the files are highly related to each other.
+  • Think step-by-step internally, but do NOT include that reasoning in the reply.
+
+  **Example**
+
+  README summary:
+  "A wiki page generator that lets developers understand any repo quickly."
+
+  Files:
+  [
+    {
+      "path": "src/cli.ts",
+      "summary": "A useful CLI tool to help user login to the web UI"
+    },
+    {
+      "path": "src/auth/email.ts",
+      "summary": "Email login for the web UI"
+    },
+    {
+      "path": "src/auth/password.ts",
+      "summary": "Password login for the web UI"
+    },
+    {
+      "path": "src/db/index.ts",
+      "summary": "User and Email database operations"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "summary": "Prisma schema for the database"
+    }
+  ]
+
+  →
+  {
+    "title": "Authentication",
+    "shortSummary": "Email + password login for the web UI"
+  }
+  `;
+
+  const completion = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `README summary: ${readmeSummary}
+        
+        Files: ${JSON.stringify(
+          fileContents.map((file) => ({
+            path: file.path,
+            summary: file.summary,
+          }))
+        )}`,
+      },
+    ],
+  });
+
+  try {
+    const subsystem = JSON.parse(
+      completion.choices[0].message.content || "{}"
+    ) as {
+      title: string;
+      shortSummary: string;
+    };
+    return { ...subsystem, files: fileContents.map((file) => file.path) };
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
 export const generateSubsystemSummaryFromFiles = async (
   title: string,
   files: {
@@ -182,4 +276,35 @@ export const generateSubsystemSummaryFromFiles = async (
   });
 
   return completion.choices[0].message.content || "";
+};
+
+export const generateFileSummary = async (fileContent: string) => {
+  const systemPrompt = `
+  You are a helpful assistant that generates a summary for a given file.
+  The summary should be a short description of the file.
+  The summary should be in plain text.
+  The summary should be in English.
+  The summary should be no more than 100 words.
+  `;
+
+  const completion = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: fileContent },
+    ],
+    temperature: TEMPERATURE,
+  });
+
+  return completion.choices[0].message.content || "";
+};
+
+export const generateFileEmbedding = async (summary: string) => {
+  const embedRes = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: summary,
+  });
+
+  const embedding = embedRes.data[0].embedding;
+  return embedding;
 };

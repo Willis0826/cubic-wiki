@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
   generateShortSummary,
-  generateSubsystems,
+  generateSubsystemsFromFilePaths,
   generateSummaryFromReadme,
 } from "@/lib/llm";
 
@@ -18,6 +18,8 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
 
+// File path based generation
+// This is the old generation method, it's cheaper but less accurate
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     // Analysis the code structure and group them into subsystems
     // also use the readme summary to help the analysis
-    const subsystems = await generateSubsystems(buckets, summary);
+    const subsystems = await generateSubsystemsFromFilePaths(buckets, summary);
 
     // Check if a wiki page already exists for this repository
     const existingWikiPage = await prisma.wikiPage.findFirst({
