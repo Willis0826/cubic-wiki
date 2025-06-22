@@ -28,7 +28,7 @@ export default async function WikiDetailPage({ params }: PageProps) {
   const wiki = await prisma.wikiPage.findUnique({
     where: { id: wikiId },
     include: {
-      subsystems: {
+      Subsystems: {
         orderBy: {
           id: "asc",
         },
@@ -74,13 +74,13 @@ export default async function WikiDetailPage({ params }: PageProps) {
       </Paper>
 
       {/* Display subsystems */}
-      {wiki.subsystems.length > 0 && (
+      {wiki.Subsystems.length > 0 && (
         <Paper p="md" withBorder shadow="xs" mb="md">
           <Title order={3} mb="md">
             Subsystems
           </Title>
           <Stack gap="md">
-            {wiki.subsystems.map((subsystem) => (
+            {wiki.Subsystems.map((subsystem) => (
               <SubsystemCard
                 key={subsystem.id}
                 subsystem={{
