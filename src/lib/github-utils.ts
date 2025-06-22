@@ -14,7 +14,7 @@ export const octokit = new Octokit({
 // GitHub URL parsing utility
 export function parseGitHubUrl(repoUrl: string) {
   const match = repoUrl.match(
-    /github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/
+    /github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/|$)/
   );
   if (!match) {
     throw new Error("Invalid GitHub URL");
