@@ -114,8 +114,9 @@ export default function RepoInput() {
         🔍 Generate Wiki
       </Title>
       <Text mb="md" c="dimmed">
-        Using file names and readme to generate multiple subsystems. <br />
-        This is cheaper but less accurate.
+        Quick analysis using README files and directory structure to create
+        basic documentation. <br />
+        Fast and cost-effective, but may miss important code details.
       </Text>
       <form onSubmit={basicForm.handleSubmit(onSubmit)}>
         <TextInput
@@ -153,9 +154,11 @@ export default function RepoInput() {
       </Flex>
 
       <Text mb="md" c="dimmed">
-        Indexing the entire codebase to generate accurate documentation. <br />
-        Using file content to generate multiple subsystems. <br />
-        This is more accurate but more expensive.
+        Deep analysis of ~50 key source files with intelligent filtering and
+        clustering. <br />
+        Excludes generated files, tests, and configs. Groups related files into
+        logical subsystems. <br />
+        More comprehensive and accurate, but takes longer to process.
       </Text>
       <form onSubmit={proForm.handleSubmit(onSubmitV2)}>
         <TextInput
