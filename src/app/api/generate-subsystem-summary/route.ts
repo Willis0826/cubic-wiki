@@ -1,41 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Octokit } from "octokit";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateSubsystemSummaryFromFiles } from "@/lib/llm";
+import { getFileContent } from "@/lib/github-utils";
 
 // Zod schema for safety
 const bodySchema = z.object({
   subsystemId: z.number(),
 });
-
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
-
-const getFileContent = async (repoUrl: string, filePath: string) => {
-  try {
-    const response = await octokit.rest.repos.getContent({
-      owner: repoUrl.split("/")[3],
-      repo: repoUrl.split("/")[4],
-      path: filePath,
-    });
-
-    // Handle the case where response.data might be an array
-    if (Array.isArray(response.data)) {
-      return null;
-    }
-
-    if (response.data.type !== "file") {
-      return null;
-    }
-
-    return Buffer.from(response.data.content || "", "base64").toString("utf-8");
-  } catch (error) {
-    console.error(`Failed to fetch file ${filePath}:`, error);
-    return null;
-  }
-};
 
 export async function POST(req: NextRequest) {
   try {

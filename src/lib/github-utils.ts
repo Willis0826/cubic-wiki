@@ -1,5 +1,6 @@
 import { Octokit } from "octokit";
 import { z } from "zod";
+import JSZip from "jszip";
 
 // Zod schema for safety
 export const repoUrlSchema = z.object({
@@ -9,6 +10,8 @@ export const repoUrlSchema = z.object({
 // Create Octokit client
 export const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
+  // Disable throttling, otherwise the request will hang until the rate limit is reset
+  throttle: { onRateLimit: () => false, onSecondaryRateLimit: () => false },
 });
 
 // GitHub URL parsing utility
@@ -75,6 +78,49 @@ export async function getFileContent(repoUrl: string, filePath: string) {
     console.error(`Failed to fetch file ${filePath}:`, error);
     return null;
   }
+}
+
+// Get file content from repo zip, for better performance and handling rate limit
+export async function getFileFromRepoZip(
+  repoUrl: string
+): Promise<{ path: string; content: string }[]> {
+  const { owner, repo } = parseGitHubUrl(repoUrl);
+
+  // Get default branch
+  const repoMeta = await octokit.rest.repos.get({ owner, repo });
+  const branch = repoMeta.data.default_branch;
+
+  // Download the ZIP archive
+  const response = await octokit.request(
+    `GET /repos/${owner}/${repo}/zipball/${branch}`,
+    {
+      owner,
+      repo,
+      ref: branch,
+      headers: { Accept: "application/vnd.github.v3.raw" },
+    }
+  );
+
+  // Extract ZIP contents
+  const zip = await JSZip.loadAsync(Buffer.from(response.data));
+  const files: { path: string; content: string }[] = [];
+
+  for (const fullPath in zip.files) {
+    const entry = zip.files[fullPath];
+    if (entry.dir) continue;
+
+    // Strip GitHub-added root directory (e.g., "owner-repo-sha/")
+    const relativePath = fullPath.substring(fullPath.indexOf("/") + 1);
+
+    try {
+      const content = await entry.async("string");
+      files.push({ path: relativePath, content });
+    } catch {
+      // Skip unreadable (likely binary) files
+    }
+  }
+
+  return files;
 }
 
 // Common wiki page data structure

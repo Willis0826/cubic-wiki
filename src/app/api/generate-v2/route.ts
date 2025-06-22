@@ -5,6 +5,7 @@ import {
   generateSummaryFromReadme,
   generateFileSummary,
   generateFileEmbedding,
+  generateImportantFiles,
 } from "@/lib/llm";
 import pLimit from "p-limit";
 import { kmeans } from "ml-kmeans";
@@ -12,10 +13,9 @@ import {
   repoUrlSchema,
   parseGitHubUrl,
   getRepoMetadata,
-  getRepoTree,
   getReadmeContent,
-  getFileContent,
   createWikiPageData,
+  getFileFromRepoZip,
 } from "@/lib/github-utils";
 import {
   findExistingWikiPage,
@@ -39,64 +39,65 @@ export async function POST(req: NextRequest) {
     // Get default branch
     const { branch } = await getRepoMetadata(owner, repo);
 
-    // Get repo tree
-    const tree = await getRepoTree(owner, repo, branch);
+    // Get file content from repo zip
+    const fileContents = await getFileFromRepoZip(repoUrl);
 
-    // Use Promise.all to fetch all files concurrently
-    const fileContents = await Promise.all(
-      tree.map(async (file) => {
-        const content = await getFileContent(repoUrl, file.path!);
-        return {
-          path: file.path!,
-          content: content || "",
-        };
-      })
-    );
+    // Filter out the files by the file name
+    const filteredFileContents = fileContents.filter((file) => {
+      if (
+        file.path.startsWith("dist/") ||
+        file.path.endsWith(".lock") ||
+        file.path.includes("package-lock.json") ||
+        file.path.includes("pnpm-lock.yaml") ||
+        file.path.includes("node_modules/") ||
+        file.path.endsWith(".exe") ||
+        file.path.endsWith(".png") ||
+        file.path.endsWith(".jpg") ||
+        file.path.endsWith(".jpeg") ||
+        file.path.endsWith(".gif") ||
+        file.path.endsWith(".svg") ||
+        file.path.endsWith(".ico") ||
+        file.path.endsWith(".webp") ||
+        file.path.endsWith(".mp4") ||
+        file.path.endsWith(".mp3") ||
+        file.path.endsWith(".wav") ||
+        file.path.endsWith(".ogg") ||
+        file.path.endsWith(".flac") ||
+        file.path.endsWith(".webm") ||
+        file.path.endsWith(".mov") ||
+        file.path.endsWith(".zip") ||
+        file.path.endsWith(".tar") ||
+        file.path.endsWith(".gz") ||
+        file.path.endsWith(".bz2") ||
+        file.path.endsWith(".xz") ||
+        file.path.endsWith(".7z") ||
+        file.path.endsWith(".rar") ||
+        file.path.endsWith(".iso")
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    // Ask LLM to only keep the important files for inferring the subsystems if the file count is more than 50
+    let importantFiles: { path: string; content: string }[] = [];
+    if (filteredFileContents.length > 50) {
+      importantFiles = await generateImportantFiles(filteredFileContents);
+    } else {
+      importantFiles = filteredFileContents;
+    }
 
     // Generate summary, embedding, and save to database for each file
     // Using plimit to limit the number of concurrent requests to 10
     const fileSummaries = await Promise.all(
-      fileContents.map((file) =>
-        limit(() => {
-          // skip noise files or binary files
-          if (
-            file.path.startsWith("dist/") ||
-            file.path.endsWith(".lock") ||
-            file.path.includes("package-lock.json") ||
-            file.path.includes("pnpm-lock.yaml") ||
-            file.path.startsWith("node_modules/") ||
-            file.path.endsWith(".exe") ||
-            file.path.endsWith(".png") ||
-            file.path.endsWith(".jpg") ||
-            file.path.endsWith(".jpeg") ||
-            file.path.endsWith(".gif") ||
-            file.path.endsWith(".svg") ||
-            file.path.endsWith(".ico") ||
-            file.path.endsWith(".webp") ||
-            file.path.endsWith(".mp4") ||
-            file.path.endsWith(".mp3") ||
-            file.path.endsWith(".wav") ||
-            file.path.endsWith(".ogg") ||
-            file.path.endsWith(".flac") ||
-            file.path.endsWith(".webm") ||
-            file.path.endsWith(".mov") ||
-            file.path.endsWith(".zip") ||
-            file.path.endsWith(".tar") ||
-            file.path.endsWith(".gz") ||
-            file.path.endsWith(".bz2") ||
-            file.path.endsWith(".xz") ||
-            file.path.endsWith(".7z") ||
-            file.path.endsWith(".rar") ||
-            file.path.endsWith(".iso")
-          ) {
-            return "";
-          }
-          return generateFileSummary(file.content).catch((err) => {
+      importantFiles.map((file) =>
+        limit(() =>
+          generateFileSummary(file.content).catch((err) => {
             // skip the error, it could be token limit error
             console.error(err);
             return "";
-          });
-        })
+          })
+        )
       )
     );
     const fileEmbedding = await Promise.all(
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     // Assign each file to the closest cluster
     for (let i = 0; i < fileEmbedding.length; i++) {
       const embedding = fileEmbedding[i];
-      const path = fileContents[i].path;
+      const path = importantFiles[i].path;
       const summary = fileSummaries[i];
       // Which cluster this file belongs to
       const clusterIndex = clustering.clusters[i];
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
         existingWikiPage.id,
         wikiPageData,
         subsystems,
-        fileContents,
+        importantFiles,
         fileSummaries,
         fileEmbedding
       );
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
     const wikiPage = await createWikiPageWithFiles(
       wikiPageData,
       subsystems,
-      fileContents,
+      importantFiles,
       fileSummaries,
       fileEmbedding
     );

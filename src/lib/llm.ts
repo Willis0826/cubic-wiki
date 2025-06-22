@@ -132,6 +132,69 @@ Files:
   }
 };
 
+export const generateImportantFiles = async (
+  fileContents: {
+    path: string;
+    content: string;
+  }[]
+) => {
+  const systemPrompt = `
+You are a software engineer analysing a codebase.
+
+Your job is to select the most important files from a given list of file paths.
+These files should help identify the major subsystems / features of the repository.
+
+**Constraints:**
+- ONLY choose file paths from the list provided by the user.
+- DO NOT invent or guess file paths that are not in the list.
+- If you don't see a README or index file in the list, don't include one.
+- Only return files that exist in the list.
+- The file paths are case-sensitive.
+- DO NOT include any binary or asset files such as images, audio, video, font files, or minified builds.
+- Exclude files with extensions like: .png, .jpg, .jpeg, .svg, .gif, .webp, .ico, .mp3, .mp4, .wav, .ogg, .ttf, .woff, .woff2, .eot, .zip, .min.js, etc.
+
+**Output:**
+- A raw JSON array of strings (e.g., ["src/index.ts", "README.md"]).
+- NO markdown, no commentary, no explanations.
+- Limit to 50 files max.
+
+Only output valid JSON.
+  `;
+
+  const completion = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: JSON.stringify(fileContents.map((file) => file.path)),
+      },
+    ],
+    temperature: TEMPERATURE,
+  });
+
+  try {
+    const importantFiles = JSON.parse(
+      completion.choices[0].message.content || "[]"
+    ) as string[];
+
+    // Filter out the files that are not in the important files
+    // Take care the case sensitivity of the file paths
+    const fileMap = new Map(fileContents.map((f) => [f.path.toLowerCase(), f]));
+    const filteredImportantFiles = importantFiles
+      .map((p) => fileMap.get(p.toLowerCase()))
+      .filter((f): f is { path: string; content: string } => !!f);
+
+    console.log(filteredImportantFiles.map((file) => file.path));
+    console.log(filteredImportantFiles.length);
+
+    return filteredImportantFiles;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
 export const generateSubsystemsFromFileSummary = async (
   fileContents: {
     path: string;
