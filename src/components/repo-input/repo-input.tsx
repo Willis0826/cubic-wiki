@@ -9,11 +9,17 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { showNotification } from "@mantine/notifications";
-import { IconCheck, IconLoader, IconX } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconInfoCircle,
+  IconLoader,
+  IconX,
+} from "@tabler/icons-react";
 
 type FormValues = {
   repoUrl: string;
@@ -134,12 +140,16 @@ export default function RepoInput() {
       <Flex align="center" mb="md">
         <Title order={2}>✨ Generate Wiki</Title>
         <Badge
-          ml="sm"
+          mx="sm"
           variant="gradient"
           gradient={{ from: "blue", to: "cyan", deg: 90 }}
         >
-          Pro
+          Beta
         </Badge>
+        {/* info icon */}
+        <Tooltip label="Request timeout is 60 seconds, larger repos may failed to generate">
+          <IconInfoCircle size={22} />
+        </Tooltip>
       </Flex>
 
       <Text mb="md" c="dimmed">
