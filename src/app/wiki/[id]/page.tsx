@@ -13,6 +13,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Components } from "react-markdown";
 import { SubsystemCard } from "@/components/subsystem-card/subsystem-card";
+import { ChatWidget } from "@/components/chat/chat-widget";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -53,49 +54,54 @@ export default async function WikiDetailPage({ params }: PageProps) {
   };
 
   return (
-    <Container py="xl">
-      <Title order={2}>{wiki.title}</Title>
-      <Text size="sm" mb="md" c="dimmed">
-        Repo:{" "}
-        <Anchor
-          href={`${wiki.repoUrl}/tree/${wiki.branch}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {wiki.repoUrl}
-        </Anchor>
-      </Text>
+    <>
+      <Container py="xl">
+        <Title order={2}>{wiki.title}</Title>
+        <Text size="sm" mb="md" c="dimmed">
+          Repo:{" "}
+          <Anchor
+            href={`${wiki.repoUrl}/tree/${wiki.branch}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {wiki.repoUrl}
+          </Anchor>
+        </Text>
 
-      {/* Summary */}
-      <Paper p="md" withBorder shadow="xs" mb="md">
-        <Markdown remarkPlugins={[remarkGfm]} components={components}>
-          {wiki.summary}
-        </Markdown>
-      </Paper>
-
-      {/* Display subsystems */}
-      {wiki.Subsystems.length > 0 && (
+        {/* Summary */}
         <Paper p="md" withBorder shadow="xs" mb="md">
-          <Title order={3} mb="md">
-            Subsystems
-          </Title>
-          <Stack gap="md">
-            {wiki.Subsystems.map((subsystem) => (
-              <SubsystemCard
-                key={subsystem.id}
-                subsystem={{
-                  ...subsystem,
-                  files: Array.isArray(subsystem.files)
-                    ? (subsystem.files as string[])
-                    : [],
-                }}
-                repoUrl={wiki.repoUrl}
-                branch={wiki.branch}
-              />
-            ))}
-          </Stack>
+          <Markdown remarkPlugins={[remarkGfm]} components={components}>
+            {wiki.summary}
+          </Markdown>
         </Paper>
-      )}
-    </Container>
+
+        {/* Display subsystems */}
+        {wiki.Subsystems.length > 0 && (
+          <Paper p="md" withBorder shadow="xs" mb="md">
+            <Title order={3} mb="md">
+              Subsystems
+            </Title>
+            <Stack gap="md">
+              {wiki.Subsystems.map((subsystem) => (
+                <SubsystemCard
+                  key={subsystem.id}
+                  subsystem={{
+                    ...subsystem,
+                    files: Array.isArray(subsystem.files)
+                      ? (subsystem.files as string[])
+                      : [],
+                  }}
+                  repoUrl={wiki.repoUrl}
+                  branch={wiki.branch}
+                />
+              ))}
+            </Stack>
+          </Paper>
+        )}
+      </Container>
+
+      {/* Chat Widget */}
+      <ChatWidget wikiId={wikiId} />
+    </>
   );
 }
