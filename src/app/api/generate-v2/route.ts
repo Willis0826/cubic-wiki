@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Octokit } from "octokit";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import {
   generateShortSummary,
   generateSubsystemsFromFileSummary,
@@ -11,43 +8,23 @@ import {
 } from "@/lib/llm";
 import pLimit from "p-limit";
 import { kmeans } from "ml-kmeans";
+import {
+  repoUrlSchema,
+  parseGitHubUrl,
+  getRepoMetadata,
+  getRepoTree,
+  getReadmeContent,
+  getFileContent,
+  createWikiPageData,
+} from "@/lib/github-utils";
+import {
+  findExistingWikiPage,
+  updateWikiPageWithFiles,
+  createWikiPageWithFiles,
+} from "@/lib/wiki-utils";
 
 // Limit the number of concurrent requests to 10
 const limit = pLimit(10);
-
-// Zod schema for safety
-const bodySchema = z.object({
-  repoUrl: z.string().url(),
-});
-
-// Create clients
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
-
-const getFileContent = async (repoUrl: string, filePath: string) => {
-  try {
-    const response = await octokit.rest.repos.getContent({
-      owner: repoUrl.split("/")[3],
-      repo: repoUrl.split("/")[4],
-      path: filePath,
-    });
-
-    // Handle the case where response.data might be an array
-    if (Array.isArray(response.data)) {
-      return null;
-    }
-
-    if (response.data.type !== "file") {
-      return null;
-    }
-
-    return Buffer.from(response.data.content || "", "base64").toString("utf-8");
-  } catch (error) {
-    console.error(`Failed to fetch file ${filePath}:`, error);
-    return null;
-  }
-};
 
 // File content based generation
 // This is the new generation method, it's more accurate but more expensive
@@ -55,34 +32,15 @@ const getFileContent = async (repoUrl: string, filePath: string) => {
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
-    const { repoUrl } = bodySchema.parse(json);
+    const { repoUrl } = repoUrlSchema.parse(json);
 
-    const match = repoUrl.match(
-      /github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/
-    );
-    if (!match) {
-      return NextResponse.json(
-        { error: "Invalid GitHub URL" },
-        { status: 400 }
-      );
-    }
-    const owner = match[1];
-    const repo = match[2];
+    const { owner, repo } = parseGitHubUrl(repoUrl);
 
     // Get default branch
-    const repoMeta = await octokit.rest.repos.get({ owner, repo });
-    const branch = repoMeta.data.default_branch;
+    const { branch } = await getRepoMetadata(owner, repo);
 
     // Get repo tree
-    // There is a limit of 100,000 entries and 7MB of data
-    const treeRes = await octokit.rest.git.getTree({
-      owner,
-      repo,
-      tree_sha: branch,
-      recursive: "true",
-    });
-
-    const tree = treeRes.data.tree.filter((item) => item.type === "blob");
+    const tree = await getRepoTree(owner, repo, branch);
 
     // Use Promise.all to fetch all files concurrently
     const fileContents = await Promise.all(
@@ -98,7 +56,48 @@ export async function POST(req: NextRequest) {
     // Generate summary, embedding, and save to database for each file
     // Using plimit to limit the number of concurrent requests to 10
     const fileSummaries = await Promise.all(
-      fileContents.map((file) => limit(() => generateFileSummary(file.content)))
+      fileContents.map((file) =>
+        limit(() => {
+          // skip noise files or binary files
+          if (
+            file.path.startsWith("dist/") ||
+            file.path.endsWith(".lock") ||
+            file.path.includes("package-lock.json") ||
+            file.path.includes("pnpm-lock.yaml") ||
+            file.path.startsWith("node_modules/") ||
+            file.path.endsWith(".exe") ||
+            file.path.endsWith(".png") ||
+            file.path.endsWith(".jpg") ||
+            file.path.endsWith(".jpeg") ||
+            file.path.endsWith(".gif") ||
+            file.path.endsWith(".svg") ||
+            file.path.endsWith(".ico") ||
+            file.path.endsWith(".webp") ||
+            file.path.endsWith(".mp4") ||
+            file.path.endsWith(".mp3") ||
+            file.path.endsWith(".wav") ||
+            file.path.endsWith(".ogg") ||
+            file.path.endsWith(".flac") ||
+            file.path.endsWith(".webm") ||
+            file.path.endsWith(".mov") ||
+            file.path.endsWith(".zip") ||
+            file.path.endsWith(".tar") ||
+            file.path.endsWith(".gz") ||
+            file.path.endsWith(".bz2") ||
+            file.path.endsWith(".xz") ||
+            file.path.endsWith(".7z") ||
+            file.path.endsWith(".rar") ||
+            file.path.endsWith(".iso")
+          ) {
+            return "";
+          }
+          return generateFileSummary(file.content).catch((err) => {
+            // skip the error, it could be token limit error
+            console.error(err);
+            return "";
+          });
+        })
+      )
     );
     const fileEmbedding = await Promise.all(
       fileSummaries.map((summary) => generateFileEmbedding(summary))
@@ -130,12 +129,17 @@ export async function POST(req: NextRequest) {
         embedding,
       });
     }
+    // Generate subsystems for each cluster
+    const subsystems = (
+      await Promise.all(
+        clusters.map((cluster) =>
+          generateSubsystemsFromFileSummary(cluster.files)
+        )
+      )
+    ).filter((subsystem) => subsystem !== null);
 
     // Fetch README, readme is always an important part to understand the codebase
-    const readme = await octokit.rest.repos.getReadme({ owner, repo });
-    const decoded = Buffer.from(readme.data.content, "base64").toString(
-      "utf-8"
-    );
+    const decoded = await getReadmeContent(owner, repo);
     let summary = "";
     try {
       summary = await generateSummaryFromReadme(decoded);
@@ -151,56 +155,28 @@ export async function POST(req: NextRequest) {
       shortSummary = "";
     }
 
-    // Generate subsystems for each cluster
-    const subsystems = (
-      await Promise.all(
-        clusters.map((cluster) =>
-          generateSubsystemsFromFileSummary(cluster.files, summary)
-        )
-      )
-    ).filter((subsystem) => subsystem !== null);
-
     // Check if a wiki page already exists for this repository
-    const existingWikiPage = await prisma.wikiPage.findFirst({
-      where: { repoUrl },
-    });
+    const existingWikiPage = await findExistingWikiPage(repoUrl);
 
-    const wikiPageData = {
+    const wikiPageData = createWikiPageData(
       repoUrl,
       branch,
-      title: `${owner}/${repo}`,
+      owner,
+      repo,
       summary,
-      shortSummary,
-    };
+      shortSummary
+    );
 
     if (existingWikiPage) {
       // Update the existing wiki page and replace all subsystems
-      const updatedWikiPage = await prisma.wikiPage.update({
-        where: { id: existingWikiPage.id },
-        data: {
-          ...wikiPageData,
-          subsystems: {
-            deleteMany: {}, // Delete all existing subsystems
-            create: subsystems.map((subsystem) => ({
-              title: subsystem.title,
-              shortSummary: subsystem.shortSummary,
-              files: subsystem.files,
-            })),
-          },
-          File: {
-            deleteMany: {}, // Delete all existing files
-            create: fileContents.map((file, index) => ({
-              path: file.path,
-              summary: fileSummaries[index],
-              embedding: fileEmbedding[index],
-            })),
-          },
-        },
-        include: {
-          subsystems: true,
-          File: true,
-        },
-      });
+      const updatedWikiPage = await updateWikiPageWithFiles(
+        existingWikiPage.id,
+        wikiPageData,
+        subsystems,
+        fileContents,
+        fileSummaries,
+        fileEmbedding
+      );
 
       return NextResponse.json({
         id: updatedWikiPage.id,
@@ -208,28 +184,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Create new wiki page with subsystems
-    const wikiPage = await prisma.wikiPage.create({
-      data: {
-        ...wikiPageData,
-        subsystems: {
-          create: subsystems.map((subsystem) => ({
-            title: subsystem.title,
-            shortSummary: subsystem.shortSummary,
-            files: subsystem.files,
-          })),
-        },
-        File: {
-          create: fileContents.map((file, index) => ({
-            path: file.path,
-            summary: fileSummaries[index],
-            embedding: fileEmbedding[index],
-          })),
-        },
-      },
-      include: {
-        subsystems: true,
-      },
-    });
+    const wikiPage = await createWikiPageWithFiles(
+      wikiPageData,
+      subsystems,
+      fileContents,
+      fileSummaries,
+      fileEmbedding
+    );
 
     return NextResponse.json({
       id: wikiPage.id,

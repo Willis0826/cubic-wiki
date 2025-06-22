@@ -137,16 +137,13 @@ export const generateSubsystemsFromFileSummary = async (
     path: string;
     // The content of the file
     summary: string;
-  }[],
-  readmeSummary: string
+  }[]
 ) => {
   const systemPrompt = `
-  You are a software engineer documenting a codebase.
+  You are a software engineer generating a subsystem from a given files.
 
-  The provided README summary is just a summary of the codebase, it's not a detailed description of the codebase.
-  You should use the README summary to help you understand the codebase and generate a concise summary for the subsystem.
   The most important part is to understand the main features and the main purpose of the provided files array.
-  The title should not contain any project name and should focus on the main features and the main purpose of the provided files array.
+  The should focus on the main features and the main purpose of the provided files array.
   
   **Goal:** Analysis files by their summary and file paths and generate a concise for
   - Title for the subsystem
@@ -159,9 +156,6 @@ export const generateSubsystemsFromFileSummary = async (
   • Think step-by-step internally, but do NOT include that reasoning in the reply.
 
   **Example**
-
-  README summary:
-  "A wiki page generator that lets developers understand any repo quickly."
 
   Files:
   [
@@ -200,9 +194,7 @@ export const generateSubsystemsFromFileSummary = async (
       { role: "system", content: systemPrompt },
       {
         role: "user",
-        content: `README summary: ${readmeSummary}
-        
-        Files: ${JSON.stringify(
+        content: `Files: ${JSON.stringify(
           fileContents.map((file) => ({
             path: file.path,
             summary: file.summary,

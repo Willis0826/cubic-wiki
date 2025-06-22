@@ -23,11 +23,12 @@ model WikiPage {
   shortSummary String? @db.Text
 
   // the subsystems of the repo
-  subsystems Subsystem[]
+  Subsystems Subsystem[]
+  // the files of the repo
+  Files      File[]
   // general fields
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  File      File[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 model Subsystem {
@@ -52,7 +53,7 @@ model Subsystem {
 model File {
   id        Int     @id @default(autoincrement())
   // the path of the file
-  path      String  @unique
+  path      String
   // the summary of the file
   summary   String  @db.Text
   embedding Float[] // vector
@@ -60,4 +61,6 @@ model File {
   // File belongs to a WikiPage
   WikiPage   WikiPage? @relation(fields: [wikiPageId], references: [id])
   wikiPageId Int?
+
+  @@unique([path, wikiPageId])
 }

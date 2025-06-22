@@ -1,51 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Octokit } from "octokit";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import {
   generateShortSummary,
   generateSubsystemsFromFilePaths,
   generateSummaryFromReadme,
 } from "@/lib/llm";
-
-// Zod schema for safety
-const bodySchema = z.object({
-  repoUrl: z.string().url(),
-});
-
-// Create clients
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
+import {
+  repoUrlSchema,
+  parseGitHubUrl,
+  getRepoMetadata,
+  getRepoTree,
+  getReadmeContent,
+  createWikiPageData,
+} from "@/lib/github-utils";
+import {
+  findExistingWikiPage,
+  updateWikiPage,
+  createWikiPage,
+} from "@/lib/wiki-utils";
 
 // File path based generation
 // This is the old generation method, it's cheaper but less accurate
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
-    const { repoUrl } = bodySchema.parse(json);
+    const { repoUrl } = repoUrlSchema.parse(json);
 
-    const match = repoUrl.match(
-      /github\.com\/([^\/]+)\/([^\/\.]+?)(?:\.git)?(?:\/|$)/
-    );
-    if (!match) {
-      return NextResponse.json(
-        { error: "Invalid GitHub URL" },
-        { status: 400 }
-      );
-    }
-    const owner = match[1];
-    const repo = match[2];
+    const { owner, repo } = parseGitHubUrl(repoUrl);
 
     // Get default branch
-    const repoMeta = await octokit.rest.repos.get({ owner, repo });
-    const branch = repoMeta.data.default_branch;
+    const { branch } = await getRepoMetadata(owner, repo);
 
     // Fetch README, readme is always an important part to understand the codebase
-    const readme = await octokit.rest.repos.getReadme({ owner, repo });
-    const decoded = Buffer.from(readme.data.content, "base64").toString(
-      "utf-8"
-    );
+    const decoded = await getReadmeContent(owner, repo);
     let summary = "";
     try {
       summary = await generateSummaryFromReadme(decoded);
@@ -62,15 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get repo tree
-    // There is a limit of 100,000 entries and 7MB of data
-    const treeRes = await octokit.rest.git.getTree({
-      owner,
-      repo,
-      tree_sha: branch,
-      recursive: "true",
-    });
-
-    const tree = treeRes.data.tree.filter((item) => item.type === "blob");
+    const tree = await getRepoTree(owner, repo, branch);
 
     // Group by top-level folder
     const buckets: Record<string, string[]> = {};
@@ -88,33 +66,24 @@ export async function POST(req: NextRequest) {
     const subsystems = await generateSubsystemsFromFilePaths(buckets, summary);
 
     // Check if a wiki page already exists for this repository
-    const existingWikiPage = await prisma.wikiPage.findFirst({
-      where: { repoUrl },
-    });
+    const existingWikiPage = await findExistingWikiPage(repoUrl);
 
-    const wikiPageData = {
+    const wikiPageData = createWikiPageData(
       repoUrl,
       branch,
-      title: `${owner}/${repo}`,
+      owner,
+      repo,
       summary,
-      shortSummary,
-    };
+      shortSummary
+    );
 
     if (existingWikiPage) {
       // Update the existing wiki page and replace all subsystems
-      const updatedWikiPage = await prisma.wikiPage.update({
-        where: { id: existingWikiPage.id },
-        data: {
-          ...wikiPageData,
-          subsystems: {
-            deleteMany: {}, // Delete all existing subsystems
-            create: subsystems,
-          },
-        },
-        include: {
-          subsystems: true,
-        },
-      });
+      const updatedWikiPage = await updateWikiPage(
+        existingWikiPage.id,
+        wikiPageData,
+        subsystems
+      );
 
       return NextResponse.json({
         id: updatedWikiPage.id,
@@ -122,17 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create new wiki page with subsystems
-    const wikiPage = await prisma.wikiPage.create({
-      data: {
-        ...wikiPageData,
-        subsystems: {
-          create: subsystems,
-        },
-      },
-      include: {
-        subsystems: true,
-      },
-    });
+    const wikiPage = await createWikiPage(wikiPageData, subsystems);
 
     return NextResponse.json({
       id: wikiPage.id,
